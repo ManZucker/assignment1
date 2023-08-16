@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Bank and Laptop Purchase</title>
+    <style>
+        /* CSS styles */
+    </style>
+</head>
+
+<body>
+    <!-- Bank Section -->
+    <h1>Welcome to Your Bank</h1>
+    <div class="bank-container">
+        <p>Balance: $<span id="balance">500</span></p>
+        <p class="loan-status" id="loan-status" style="display: none;">Outstanding Loan: $<span
+                id="loan-amount">0</span></p>
+        <button id="get-loan">Get a loan</button>
+        <button id="repay-loan" style="display: none;">Repay loan</button>
+    </div>
+
+    <h2>Work</h2>
+    <p>Pay/Salary balance: $<span id="pay-balance">0</span></p>
+    <button id="work">Work</button>
+    <button id="bank">Bank</button>
+
+    <h3>Laptops</h3>
+    <div class="laptop-container">
+        <!--Laptop selection-->
+        <label for="specs-">Select a laptop:</label>
+        <select id="specs-"></select>
+        <ul id="specs-list"></ul>
+
+        <!--lap Info-->
+        <div class="laptop-info">
+            <img id="laptop-image" src="" alt="Laptop Image">
+            <h4 id="laptop-name"></h4>
+            <p id="laptop-description"></p>
+            <p id="laptop-price"></p>
+            <button id="buy-now">Buy Now</button>
+            <p id="buy-message"></p>
+        </div>
+    </div>
+
+
+    <script defer>
+        // JavaScript here 
+
+        // Bank elements
+        const balanceSpan = document.getElementById("balance");
+        const loanAmountSpan = document.getElementById("loan-amount");
+        const loanStatus = document.getElementById("loan-status");
+        const getLoanButton = document.getElementById("get-loan");
+        const repayLoanButton = document.getElementById("repay-loan");
+
+        // Work elements
+        const payBalanceSpan = document.getElementById("pay-balance");
+        const workButton = document.getElementById("work");
+        const bankButton = document.getElementById("bank");
+
+        // Laptop sections and the elements within
+
+        const laptopSelect = document.getElementById("specs-");
+        const specsList = document.getElementById("specs-list");
+        const laptopImage = document.getElementById("laptop-image");
+        const laptopName = document.getElementById("laptop-name");
+        const laptopDescription = document.getElementById("laptop-description");
+        const laptopPrice = document.getElementById("laptop-price");
+        const buyNowButton = document.getElementById("buy-now");
+        const buyMessage = document.getElementById("buy-message");
+
+        let laptops = []; // Store the fetched laptops
+        let selectedLaptop; // defining selectedLaptop here
+
+
+        // In this section we are fetching the information for the laptops.
+
+        fetch("https://hickory-quilled-actress.glitch.me/computers")
+            .then(response => response.json())
+            .then(data => {
+                laptops = data;
+                laptops.forEach(laptop => {
+                    let option = document.createElement("option");
+                    option.value = laptop.id;
+                    option.textContent = laptop.title;
+                    laptopSelect.appendChild(option);
+                });
+                updateLaptopInfo(laptops[0]);
+            });
+
+        
+
+
+        // Update laptop info when selection changes
+        laptopSelect.addEventListener("change", () => {
+            const selectedLaptopId = parseInt(laptopSelect.value);
+            selectedLaptop = laptops.find(laptop => laptop.id === selectedLaptopId);
+
+            // const selectedLaptop = laptops.find(laptop => laptop.id === selectedLaptopId);
+            updateLaptopInfo(selectedLaptop);
+        });
+
+        // Buy Now button click event
+        buyNowButton.addEventListener("click", () => {
+            if (selectedLaptop && balance >= selectedLaptop.price) { // Check if selectedLaptop is defined
+                balance -= selectedLaptop.price;
+                buyMessage.textContent = `Congratulations! You bought a ${selectedLaptop.title}.`;
+                updateBankUI();
+            } else if (selectedLaptop) { // Check if selectedLaptop is defined
+                buyMessage.textContent = "Sorry, you cannot afford this laptop.";
+            }
+        });
+
+
+        // Update laptop information
+        function updateLaptopInfo(laptop) {
+            laptopImage.src = laptop.image;
+            laptopName.textContent = laptop.title;
+            laptopDescription.textContent = laptop.description;
+            laptopPrice.textContent = `Price: $${laptop.price}`;
+            specsList.innerHTML = "";
+            laptop.specs.forEach(spec => {
+                const li = document.createElement("li");
+                li.textContent = spec;
+                specsList.appendChild(li);
+            });
+        }
+
+
+
+        // Initial values - Loan cant be greater than 2x of the amount in your account.
+        let balance = 500;
+        let loanAmount = 0;
+        let payBalance = 0;
+
+        // Get a loan button. 
+        getLoanButton.addEventListener("click", () => {
+            if (loanAmount === 0) {
+                const loanInput = parseFloat(prompt("Enter the loan amount:"));
+                if (!isNaN(loanInput) && loanInput > 0 && loanInput <= balance * 2) {
+                    loanAmount = loanInput;
+                    balance += loanAmount;
+                    updateUI();
+                } else {
+                    alert("Invalid loan amount. Please enter a valid number within the allowed range.");
+                }
+            } else {
+                alert("You already have an outstanding loan.");
+            }
+        });
+
+        // Repay loan button click event
+        repayLoanButton.addEventListener("click", () => {
+            if (loanAmount <= balance) {
+                balance -= loanAmount;
+                loanAmount = 0;
+                updateUI();
+            } else {
+                alert("You don't have sufficient balance to repay the loan.");
+            }
+        });
+
+        // Work button element 
+        workButton.addEventListener("click", () => {
+            payBalance += 100;
+            updateWorkUI();
+        });
+
+        // Bank button element
+
+        bankButton.addEventListener("click", () => {
+            if (loanAmount > 0) {
+                const loanRepayment = payBalance * 0.1;
+                loanAmount = Math.max(0, loanAmount - loanRepayment);
+                payBalance -= loanRepayment;
+            }
+            balance += payBalance;
+            payBalance = 0;
+            updateBankUI();
+            updateWorkUI();
+        });
+
+        // Now we have to update the UI after (Bank)
+        function updateBankUI() {
+            balanceSpan.textContent = balance;
+            loanAmountSpan.textContent = loanAmount;
+            loanStatus.style.display = loanAmount > 0 ? "block" : "none";
+            repayLoanButton.style.display = loanAmount > 0 ? "block" : "none";
+        }
+
+        // Now we have to update work UI
+        function updateWorkUI() {
+            payBalanceSpan.textContent = payBalance;
+        }
+
+
+        // Update UI function
+        function updateUI() {
+            balanceSpan.textContent = balance;
+            loanAmountSpan.textContent = loanAmount;
+            if (loanAmount > 0) {
+                loanStatus.style.display = "block";
+                repayLoanButton.style.display = "block";
+            } else {
+                loanStatus.style.display = "none";
+                repayLoanButton.style.display = "none";
+            }
+        }
+
+    </script>
+</body>
+
+</html>
